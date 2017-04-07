@@ -89,8 +89,6 @@ dependencies {
     compile 'org.openbaton:exception:' + obVersion
     compile 'org.openbaton:plugin-sdk:' + obVersion
 
-    compile 'org.apache.jclouds.labs:openstack-glance:2.0.0'
-
     compile group: 'org.pacesys', name: 'openstack4j', version: '3.0.3'
 
 
