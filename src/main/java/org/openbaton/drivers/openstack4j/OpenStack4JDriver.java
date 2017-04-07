@@ -191,16 +191,15 @@ public class OpenStack4JDriver extends VimDriver {
       OSClient os = this.authenticate(vimInstance);
       List<String> networks = getNetworkIdsFromNames(vimInstance, network);
 
-      String imageId = getImageIdFromName(vimInstance, image);
-      log.debug("imageId: " + imageId);
-      org.openstack4j.model.image.Image imageFromVim = os.images().get(imageId);
-      log.debug("Image received from VIM: " + imageFromVim);
-      if (imageFromVim == null) {
+      Image image4j = getImageFromName(vimInstance, image);
+      log.debug("Image received from VIM: " + image4j);
+      if (image4j == null) {
         throw new VimException("Not found image " + image + " on VIM " + vimInstance.getName());
-      } else if (imageFromVim.getStatus() == null
-          || imageFromVim.getStatus() != (org.openstack4j.model.image.Image.Status.ACTIVE)) {
+      } else if (image4j.getStatus() == null || image4j.getStatus() != (Image.Status.ACTIVE)) {
         throw new VimException("Image " + image + " is not yet in active. Try again later...");
       }
+      image = image4j.getId();
+      log.debug("imageId: " + image);
       Flavor flavor4j = getFlavorFromName(vimInstance, flavor);
       flavor = flavor4j.getId();
       // temporary workaround for getting first security group as it seems not supported adding multiple security groups
@@ -210,7 +209,7 @@ public class OpenStack4JDriver extends VimDriver {
             Builders.server()
                 .name(name)
                 .flavor(flavor)
-                .image(imageId)
+                .image(image)
                 .networks(networks)
                 .userData(new String(Base64.encodeBase64(userData.getBytes())))
                 .build();
@@ -219,7 +218,7 @@ public class OpenStack4JDriver extends VimDriver {
             Builders.server()
                 .name(name)
                 .flavor(flavor)
-                .image(imageId)
+                .image(image)
                 .keypairName(keypair)
                 .networks(networks)
                 .userData(new String(Base64.encodeBase64(userData.getBytes())))
@@ -236,7 +235,7 @@ public class OpenStack4JDriver extends VimDriver {
               + ", SecGroup, "
               + secGroup
               + ", imageId: "
-              + imageId
+              + image
               + ", flavorId: "
               + flavor
               + ", networks: "
@@ -315,6 +314,14 @@ public class OpenStack4JDriver extends VimDriver {
     }
     log.debug("result " + res);
     return res;
+  }
+
+  private Image getImageFromName(VimInstance vimInstance, String image) throws VimDriverException {
+    OSClient os = this.authenticate(vimInstance);
+    for (Image image4j : os.images().list()) {
+      if (image4j.getName().equals(image) || image4j.getId().equals(image)) return image4j;
+    }
+    throw new VimDriverException("Not found image '" + image + "' on " + vimInstance.getName());
   }
 
   private String getImageIdFromName(VimInstance vimInstance, String imageName)
